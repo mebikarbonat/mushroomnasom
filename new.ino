@@ -15,9 +15,18 @@ LiquidCrystal_I2C lcd(0x27,16,2);
 
 #define DHTTYPE DHT22   // DHT 22
 
+int one = 0;
+float avgt = 0.0;
+float avgh = 0.0;
+int statSensor = 0;
 
 DHT dht(DHTPIN, DHTTYPE);
 DHT dht2(DHTPIN2, DHTTYPE);
+
+float h = 0.0;
+float t = 0.0;
+float h2 = 0.0;
+float t2 = 0.0;
 
 void setup() {
   Serial.begin(9600);
@@ -28,16 +37,16 @@ void setup() {
   lcd.init();
   lcd.backlight();
   lcd.setCursor(1,0);
-  lcd.print("Boot Sys!");
+  lcd.print("Booting Sys!");
   lcd.setCursor(1,1);
   lcd.print("NARC IOTBox 1.0");
-  delay(5000);
+  delay(2000);
   lcd.clear();
   lcd.setCursor(1,0);
-  lcd.print("Sys OK");
+  lcd.print("System OK");
   lcd.setCursor(1,1);
   lcd.print("NARC IOTBox 1.0");
-  delay(5000);
+  delay(2000);
 
   pinMode(PINWater, OUTPUT);
   pinMode(PINFan, OUTPUT);
@@ -52,10 +61,10 @@ void setup() {
 void loop() {
 
   delay(2000);
-  float h = dht.readHumidity();
-  float t = dht.readTemperature();
-  float h2 = dht2.readHumidity();
-  float t2 = dht2.readTemperature();
+  h = dht.readHumidity();
+  t = dht.readTemperature();
+  h2 = dht2.readHumidity();
+  t2 = dht2.readTemperature();
 
   if (isnan(h) || isnan(t) ){
     Serial.println(F("Failed to read from DHT sensor 1!"));
@@ -64,7 +73,11 @@ void loop() {
     lcd.print("Failed to read");
     lcd.setCursor(0,1);
     lcd.print("from DHT sensor1!");
-    return;
+    //return;
+    statSensor = 1;
+  }
+  else {
+    statSensor = 0;
   }
 
   if (isnan(h2) || isnan(t2) ) {
@@ -74,22 +87,23 @@ void loop() {
     lcd.print("Failed to read");
     lcd.setCursor(0,1);
     lcd.print("from DHT sensor2!");
-    return;
+    //return;
+    statSensor = 1;
+  }
+  else {
+    statSensor = 0;
   }
 
+  avgt = (t + t2) / 2;
+  avgh = (h + h2) / 2;
+  
+  if ( statSensor == 0 ) {
   Serial.print(F("Reading From Sensor 1 : "));
   Serial.print(F("Humidity: "));
   Serial.print(h);
   Serial.print(F("%  Temperature: "));
   Serial.print(t);
   Serial.print(F("\n"));
-  lcd.clear();
-  lcd.setCursor(0,0);
-  lcd.print("S1 Temp: ");lcd.print(t,2);lcd.print("C'");
-  lcd.setCursor(0,1);
-  lcd.print("S1 Hum: ");lcd.print(h,2);lcd.print("%");
-  delay(2000);
-
   Serial.print(F("Reading From Sensor 2 : "));
   Serial.print(F("Humidity: "));
   Serial.print(h2);
@@ -98,67 +112,71 @@ void loop() {
   Serial.print(F("\n"));
   lcd.clear();
   lcd.setCursor(0,0);
-  lcd.print("S2 Temp: ");lcd.print(t2,2);lcd.print("C'");
+  lcd.print("Temp: ");lcd.print(avgt,2);lcd.print("C'");
   lcd.setCursor(0,1);
-  lcd.print("S2 Hum: ");lcd.print(h2,2);lcd.print("%");
-  delay(2000);
+  lcd.print("Hum: ");lcd.print(avgh,2);lcd.print("%");
+  }
   
-  if ( t > 27.0 && t2 > 27.0) {
+  if ( t > 27.0 && t2 > 27.0 && statSensor == 0) {
+    one = 1;
     digitalWrite(PINWater, LOW);
     digitalWrite(PINFan, LOW);
     Serial.println("Starting Water Pump and Ventilation Van to cool down temperature \n");
     lcd.clear();
     lcd.setCursor(0,0);
-    lcd.print("Start WaterPump");
+    lcd.print("T:");lcd.print(avgt,2);lcd.print(" H:");lcd.print(avgh,2);
     lcd.setCursor(0,1);
-    lcd.print("&Fan");
+    lcd.print("On WP&Fan");
     delay(10000); // Open for 10 Second
     digitalWrite(PINWater, HIGH);
     digitalWrite(PINFan, HIGH);
     Serial.println("Closing Water Pump and Ventilation Van\n");
     lcd.clear();
     lcd.setCursor(0,0);
-    lcd.print("Stop WaterPump");
+    lcd.print("T:");lcd.print(avgt,2);lcd.print(" H:");lcd.print(avgh,2);
     lcd.setCursor(0,1);
-    lcd.print("&Fan");
-    delay(10000);
+    lcd.print("Off WP&Fan");
+  }
+  else {
+    one = 0;
   }
 
-  if ( h < 60.0 && h2 < 60.0) {
+  if ( h < 60.0 && h2 < 60.0 && one == 0 && statSensor == 0) {
     digitalWrite(PINWater, LOW);
     Serial.println("Starting Water Pump to increase humidity \n");
     lcd.clear();
     lcd.setCursor(0,0);
-    lcd.print("Start WaterPump");
+    lcd.print("T:");lcd.print(avgt,2);lcd.print(" H:");lcd.print(avgh,2);
     lcd.setCursor(0,1);
-    lcd.print("");
+    lcd.print("On Waterpump Only");
     delay(10000); // Open for 10 Second
     digitalWrite(PINWater, HIGH);
     Serial.println("Closing Water Pump \n");
     lcd.clear();
     lcd.setCursor(0,0);
-    lcd.print("Stop WaterPump");
+    lcd.print("T:");lcd.print(avgt,2);lcd.print(" H:");lcd.print(avgh,2);
     lcd.setCursor(0,1);
-    lcd.print("");
-    delay(10000); // Open for 10 Second
+    lcd.print("Off Waterpump");
   }
 
-  if ( h > 80.0 && h2 > 80.0) {
+  if ( h > 80.0 && h2 > 80.0 && one == 0 && statSensor == 0) {
     digitalWrite(PINFan, LOW);
     Serial.println("Starting Fan to reduce humidity \n");
     lcd.clear();
     lcd.setCursor(0,0);
-    lcd.print("Start Fan");
+    lcd.print("T:");lcd.print(avgt,2);lcd.print(" H:");lcd.print(avgh,2);;
     lcd.setCursor(0,1);
-    lcd.print("");
+    lcd.print("On Fan Only");
     delay(10000); // Open for 10 Second
     digitalWrite(PINFan, HIGH);
     Serial.println("Closing Fan \n");
     lcd.clear();
     lcd.setCursor(0,0);
-    lcd.print("Stop Fan");
+    lcd.print("T:");lcd.print(avgt,2);lcd.print(" H:");lcd.print(avgh,2);
     lcd.setCursor(0,1);
-    lcd.print("");
-    delay(10000); // Open for 10 Second
+    lcd.print("Off Fan");
   }
+
+  avgt = 0.0;
+  avgh = 0.0;
 }

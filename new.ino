@@ -4,7 +4,6 @@
 #include "DHT.h"
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
-#include <stdio.h>
 
 LiquidCrystal_I2C lcd(0x27,16,2);
 
@@ -14,7 +13,7 @@ LiquidCrystal_I2C lcd(0x27,16,2);
 #define PINWater 15  //Water Pump
 #define PINFan 2  //Fan
 
-#define DHTTYPE DHT11   // DHT 11
+#define DHTTYPE DHT22   // DHT 22
 
 
 DHT dht(DHTPIN, DHTTYPE);
@@ -45,14 +44,14 @@ void setup() {
 
   dht.begin();
   dht2.begin();
+
+  digitalWrite(PINWater, HIGH); //Initially water pump and ventilation fan is closed
+  digitalWrite(PINFan, HIGH);
 }
 
 void loop() {
 
-  digitalWrite(PINWater, HIGH); //Initially water pump and ventilation fan is closed
-  digitalWrite(PINFan, HIGH);
   delay(2000);
-
   float h = dht.readHumidity();
   float t = dht.readTemperature();
   float h2 = dht2.readHumidity();

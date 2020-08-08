@@ -18,10 +18,6 @@ LiquidCrystal_I2C lcd(0x27,16,2);
 int one = 0;
 int two = 0;
 
-int oneStat = 0;
-int twoStat = 0;
-int threeStat = 0;
-
 float avgt = 0.0;
 float avgh = 0.0;
 int statSensor = 0;
@@ -40,11 +36,13 @@ float hPrev = 0.0;
 unsigned long currentMillis = 0;
 unsigned long previous_sensor_Millis = 0;
 unsigned long previous_one_Millis = 0;
+unsigned long previous_oneFan_Millis = 0;
 unsigned long previous_two_Millis = 0;
 unsigned long previous_three_Millis = 0;
 unsigned long previous_stop_Millis = 0;
 const unsigned long sensorInterval = 6000;
 const unsigned long oneInterval = 20000;
+const unsigned long oneFanInterval = 2000;
 const unsigned long twoInterval = 20000;
 const unsigned long threeInterval = 20000;
 const unsigned long stopInterval = 10000;
@@ -143,17 +141,24 @@ void loop() {
   hPrev = h;
   }
   
-  if ( t > 35.0 && t2 > 35.0 && statSensor == 0) {
+  if ( t > 27.0 && t2 > 27.0 && statSensor == 0) {
     one = 1;
     if(digitalRead(PINWater)==HIGH && digitalRead(PINFan)==HIGH && stop==0){
       digitalWrite(PINWater, LOW);
-      digitalWrite(PINFan, LOW);
       Serial.println("Starting Water Pump and Ventilation Van to cool down temperature \n");
       lcd.clear();
       lcd.setCursor(0,0);
       lcd.print("T:");lcd.print(avgt,2);lcd.print(" H:");lcd.print(avgh,2);
       lcd.setCursor(0,1);
       lcd.print("On WP&Fan");
+    }
+    if (currentMillis - previous_oneFan_Millis >= oneFanInterval){
+      if(digitalRead(PINFan)==HIGH && stop==0){
+        digitalWrite(PINFan, LOW);
+      }
+
+      previous_oneFan_Millis = currentMillis;
+      
     }
     if (currentMillis - previous_one_Millis >= oneInterval){
         digitalWrite(PINWater, HIGH);
